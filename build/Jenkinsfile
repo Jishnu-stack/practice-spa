@@ -1,0 +1,44 @@
+def project_id=13958
+def test_succeed=true
+
+pipeline {
+    agent any
+    stages {
+        stage('init') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'gitlab-token', variable: 'GIT_TOKEN')]) {
+                        git_token=env.GIT_TOKEN
+                        name="jenkins-ci"
+                    }
+                }
+            }
+        }
+        stage('test') {
+            steps {
+                script {
+                    if(test_succeed) { 
+                        echo 'Success.........'
+
+                        }
+                     else { 
+                        echo 'Failed'
+                        }
+                    }
+                }
+            }
+        }
+    
+    
+    post {
+        success {
+            build job: 'practice-spa-build-pipeline',wait: false
+            sh "curl -s --request POST --header \"PRIVATE-TOKEN:${git_token}\" \"https://code.qburst.com/api/v4/projects/${project_id}/statuses/${GIT_COMMIT}?state=success&name=${name}&target_url=${BUILD_URL}\""
+        }
+        failure {
+           sh "curl -s --request POST --header \"PRIVATE-TOKEN:${git_token}\" \"https://code.qburst.com/api/v4/projects/${project_id}/statuses/${GIT_COMMIT}?state=failed&name=${name}&target_url=${BUILD_URL}\""
+        }
+    }
+
+}
+
